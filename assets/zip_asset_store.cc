@@ -1,9 +1,9 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "flutter/assets/zip_asset_store.h"
-#include "lib/fxl/build_config.h"
+#include "flutter/fml/build_config.h"
 
 #include <fcntl.h>
 
@@ -14,7 +14,7 @@
 #include <string>
 #include <utility>
 
-#include "flutter/glue/trace_event.h"
+#include "flutter/fml/trace_event.h"
 
 namespace blink {
 
@@ -41,7 +41,8 @@ bool ZipAssetStore::IsValid() const {
 // |blink::AssetResolver|
 std::unique_ptr<fml::Mapping> ZipAssetStore::GetAsMapping(
     const std::string& asset_name) const {
-  TRACE_EVENT0("flutter", "ZipAssetStore::GetAsMapping");
+  TRACE_EVENT1("flutter", "ZipAssetStore::GetAsMapping", "name",
+               asset_name.c_str());
   auto found = stat_cache_.find(asset_name);
 
   if (found == stat_cache_.end()) {
@@ -58,13 +59,13 @@ std::unique_ptr<fml::Mapping> ZipAssetStore::GetAsMapping(
 
   result = unzGoToFilePos(unzipper.get(), &(found->second.file_pos));
   if (result != UNZ_OK) {
-    FXL_LOG(WARNING) << "unzGetCurrentFileInfo failed, error=" << result;
+    FML_LOG(WARNING) << "unzGetCurrentFileInfo failed, error=" << result;
     return nullptr;
   }
 
   result = unzOpenCurrentFile(unzipper.get());
   if (result != UNZ_OK) {
-    FXL_LOG(WARNING) << "unzOpenCurrentFile failed, error=" << result;
+    FML_LOG(WARNING) << "unzOpenCurrentFile failed, error=" << result;
     return nullptr;
   }
 

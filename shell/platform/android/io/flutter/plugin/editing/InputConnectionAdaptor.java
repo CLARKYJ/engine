@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -158,6 +158,9 @@ class InputConnectionAdaptor extends BaseInputConnection {
                 int character = event.getUnicodeChar();
                 if (character != 0) {
                     int selStart = Math.max(0, Selection.getSelectionStart(mEditable));
+                    int selEnd = Math.max(0, Selection.getSelectionEnd(mEditable));
+                    if (selEnd != selStart)
+                        mEditable.delete(selStart, selEnd);
                     mEditable.insert(selStart, String.valueOf((char) character));
                     setSelection(selStart + 1, selStart + 1);
                     updateEditingState();

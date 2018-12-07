@@ -1,11 +1,11 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "flutter/shell/platform/darwin/ios/framework/Source/FlutterTextInputPlugin.h"
 
-#include <UIKit/UIKit.h>
 #include <Foundation/Foundation.h>
+#include <UIKit/UIKit.h>
 
 static const char _kTextAffinityDownstream[] = "TextAffinity.downstream";
 static const char _kTextAffinityUpstream[] = "TextAffinity.upstream";
@@ -28,6 +28,18 @@ static UIKeyboardType ToUIKeyboardType(NSDictionary* type) {
   if ([inputType isEqualToString:@"TextInputType.url"])
     return UIKeyboardTypeURL;
   return UIKeyboardTypeDefault;
+}
+
+static UITextAutocapitalizationType ToUITextAutoCapitalizationType(NSDictionary* type) {
+  NSString* textCapitalization = type[@"textCapitalization"];
+  if ([textCapitalization isEqualToString:@"TextCapitalization.characters"]) {
+    return UITextAutocapitalizationTypeAllCharacters;
+  } else if ([textCapitalization isEqualToString:@"TextCapitalization.sentences"]) {
+    return UITextAutocapitalizationTypeSentences;
+  } else if ([textCapitalization isEqualToString:@"TextCapitalization.words"]) {
+    return UITextAutocapitalizationTypeWords;
+  }
+  return UITextAutocapitalizationTypeNone;
 }
 
 static UIReturnKeyType ToUIReturnKeyType(NSString* inputType) {
@@ -71,14 +83,6 @@ static UIReturnKeyType ToUIReturnKeyType(NSString* inputType) {
 
   // Present default key if bad input type is given.
   return UIReturnKeyDefault;
-}
-
-static UITextAutocapitalizationType ToUITextAutocapitalizationType(NSString* inputType) {
-  if ([inputType isEqualToString:@"TextInputType.text"])
-    return UITextAutocapitalizationTypeSentences;
-  if ([inputType isEqualToString:@"TextInputType.multiline"])
-    return UITextAutocapitalizationTypeSentences;
-  return UITextAutocapitalizationTypeNone;
 }
 
 #pragma mark - FlutterTextPosition
@@ -285,6 +289,13 @@ static UITextAutocapitalizationType ToUITextAutocapitalizationType(NSString* inp
   }
 }
 
+- (id)insertDictationResultPlaceholder {
+  return @"";
+}
+
+- (void)removeDictationResultPlaceholder:(id)placeholder willInsertResult:(BOOL)willInsertResult {
+}
+
 - (NSString*)textInRange:(UITextRange*)range {
   NSRange textRange = ((FlutterTextRange*)range).range;
   return [self.text substringWithRange:textRange];
@@ -293,7 +304,6 @@ static UITextAutocapitalizationType ToUITextAutocapitalizationType(NSString* inp
 - (void)replaceRange:(UITextRange*)range withText:(NSString*)text {
   NSRange replaceRange = ((FlutterTextRange*)range).range;
   NSRange selectedRange = _selectedTextRange.range;
-
   // Adjust the text selection:
   // * reduce the length by the intersection length
   // * adjust the location by newLength - oldLength + intersectionLength
@@ -585,7 +595,7 @@ static UITextAutocapitalizationType ToUITextAutocapitalizationType(NSString* inp
 }
 
 - (void)insertText:(NSString*)text {
-  _selectionAffinity = _kTextAffinityUpstream;
+  _selectionAffinity = _kTextAffinityDownstream;
   [self replaceRange:_selectedTextRange withText:text];
 }
 
@@ -690,10 +700,10 @@ static UITextAutocapitalizationType ToUITextAutocapitalizationType(NSString* inp
   NSString* keyboardAppearance = configuration[@"keyboardAppearance"];
   _view.keyboardType = ToUIKeyboardType(inputType);
   _view.returnKeyType = ToUIReturnKeyType(configuration[@"inputAction"]);
-  _view.autocapitalizationType = ToUITextAutocapitalizationType(inputType[@"name"]);
+  _view.autocapitalizationType = ToUITextAutoCapitalizationType(configuration);
   if ([keyboardAppearance isEqualToString:@"Brightness.dark"]) {
     _view.keyboardAppearance = UIKeyboardAppearanceDark;
-  } else if ([keyboardAppearance isEqualToString:@"Brightness.light"]) { 
+  } else if ([keyboardAppearance isEqualToString:@"Brightness.light"]) {
     _view.keyboardAppearance = UIKeyboardAppearanceLight;
   } else {
     _view.keyboardAppearance = UIKeyboardAppearanceDefault;

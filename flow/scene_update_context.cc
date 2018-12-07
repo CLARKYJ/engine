@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,14 +7,14 @@
 #include "flutter/flow/export_node.h"
 #include "flutter/flow/layers/layer.h"
 #include "flutter/flow/matrix_decomposition.h"
-#include "flutter/glue/trace_event.h"
+#include "flutter/fml/trace_event.h"
 
 namespace flow {
 
 SceneUpdateContext::SceneUpdateContext(scenic::Session* session,
                                        SurfaceProducer* surface_producer)
     : session_(session), surface_producer_(surface_producer) {
-  FXL_DCHECK(surface_producer_ != nullptr);
+  FML_DCHECK(surface_producer_ != nullptr);
 }
 
 SceneUpdateContext::~SceneUpdateContext() {
@@ -27,7 +27,7 @@ SceneUpdateContext::~SceneUpdateContext() {
 void SceneUpdateContext::AddChildScene(ExportNode* export_node,
                                        SkPoint offset,
                                        bool hit_testable) {
-  FXL_DCHECK(top_entity_);
+  FML_DCHECK(top_entity_);
 
   export_node->Bind(*this, top_entity_->entity_node(), offset, hit_testable);
 }
@@ -94,7 +94,7 @@ void SceneUpdateContext::CreateFrame(scenic::EntityNode& entity_node,
     SetShapeColor(shape_node, color);
 
     scenic::Rectangle inner_shape(session_, inner_bounds.width(),
-                                      inner_bounds.height());
+                                  inner_bounds.height());
     scenic::ShapeNode inner_node(session_);
     inner_node.SetShape(inner_shape);
     inner_node.SetTranslation(inner_bounds.width() * 0.5f + inner_bounds.left(),
@@ -161,7 +161,7 @@ scenic::Image* SceneUpdateContext::GenerateImageIfNeeded(
   auto surface = surface_producer_->ProduceSurface(physical_size);
 
   if (!surface) {
-    FXL_LOG(ERROR) << "Could not acquire a surface from the surface producer "
+    FML_LOG(ERROR) << "Could not acquire a surface from the surface producer "
                       "of size: "
                    << physical_size.width() << "x" << physical_size.height();
     return nullptr;
@@ -185,11 +185,16 @@ SceneUpdateContext::ExecutePaintTasks(CompositorContext::ScopedFrame& frame) {
   TRACE_EVENT0("flutter", "SceneUpdateContext::ExecutePaintTasks");
   std::vector<std::unique_ptr<SurfaceProducerSurface>> surfaces_to_submit;
   for (auto& task : paint_tasks_) {
-    FXL_DCHECK(task.surface);
+    FML_DCHECK(task.surface);
     SkCanvas* canvas = task.surface->GetSkiaSurface()->getCanvas();
-    Layer::PaintContext context = {*canvas, frame.context().frame_time(),
+    Layer::PaintContext context = {canvas,
+                                   canvas,
+                                   nullptr,
+                                   frame.context().frame_time(),
                                    frame.context().engine_time(),
-                                   frame.context().texture_registry(), false};
+                                   frame.context().texture_registry(),
+                                   &frame.context().raster_cache(),
+                                   false};
     canvas->restoreToCount(1);
     canvas->save();
     canvas->clear(task.background_color);
@@ -214,7 +219,7 @@ SceneUpdateContext::Entity::Entity(SceneUpdateContext& context)
 }
 
 SceneUpdateContext::Entity::~Entity() {
-  FXL_DCHECK(context_.top_entity_ == this);
+  FML_DCHECK(context_.top_entity_ == this);
   context_.top_entity_ = previous_entity_;
 }
 
@@ -302,7 +307,7 @@ SceneUpdateContext::Frame::~Frame() {
 }
 
 void SceneUpdateContext::Frame::AddPaintedLayer(Layer* layer) {
-  FXL_DCHECK(layer->needs_painting());
+  FML_DCHECK(layer->needs_painting());
   paint_layers_.push_back(layer);
   paint_bounds_.join(layer->paint_bounds());
 }
